@@ -3,66 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Practice 10 & 11 Defense</title>
+    <title>Product Management System</title>
     <style>
-        body { font-family: sans-serif; padding: 30px; background: #f4f7f6; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { text-align: center; }
-        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 5px; margin: 5px; }
+        body { font-family: sans-serif; margin: 40px; line-height: 1.6; }
+        .section { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        button { padding: 10px 15px; margin-right: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
         button:hover { background: #0056b3; }
-        .product-card { border-bottom: 1px solid #eee; padding: 10px; }
-        .controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
+        .product-card { border-bottom: 1px solid #eee; padding: 10px 0; }
+        #pagination-info { font-weight: bold; margin: 0 15px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Product Management System</h1>
 
-        <div class="section">
-            <h3>Task 10: Sorting</h3>
-            <button onclick="fetchData('/api/products?sort=price')">Sort by Price (Low to High)</button>
-            <button onclick="fetchData('/api/products?sort=-price')">Sort by Price (High to Low)</button>
-            <button onclick="fetchData('/api/products?sort=name')">Sort by Name (A-Z)</button>
-        </div>
+    <h1>Product Management System</h1>
 
-        <div class="section">
-            <h3>Task 11: Pagination</h3>
-            <div class="controls">
-                <button onclick="changePage(-1)">Previous</button>
-                <span id="pageLabel">Page: 1</span>
-                <button onclick="changePage(1)">Next</button>
-            </div>
-        </div>
+    <div class="section">
+        <h3>Task 10: Sorting</h3>
+        <button onclick="fetchData('?sort=price')">Sort by Price (Low to High)</button>
+        <button onclick="fetchData('?sort=-price')">Sort by Price (High to Low)</button>
+        <button onclick="fetchData('?sort=name')">Sort by Name (A-Z)</button>
+    </div>
 
-        <div id="productList"></div>
+    <div class="section">
+        <h3>Task 11: Pagination</h3>
+        <button onclick="changePage(-1)">Previous</button>
+        <span id="pagination-info">Page: 1</span>
+        <button onclick="changePage(1)">Next</button>
+    </div>
+
+    <div id="product-list" class="section">
+        <h3>Products:</h3>
+        <div id="container">Loading...</div>
     </div>
 
     <script>
         let currentPage = 1;
+        const limit = 5;
 
-        async function fetchData(url) {
-            const res = await fetch(url);
-            const responseData = await res.json();
-            const products = responseData.data ? responseData.data : responseData;
-            
-            const list = document.getElementById('productList');
-            list.innerHTML = products.map(p => `
+        // 1. Деректерді алу функциясы (Relative path қолданылған)
+        async function fetchData(query = '') {
+            const container = document.getElementById('container');
+            container.innerHTML = 'Loading...';
+
+            try {
+                // Маңызды: localhost немесе render сілтемесін жазбаңыз, тек /api/products
+                const response = await fetch(`/api/products${query}`);
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    displayProducts(result.data);
+                    document.getElementById('pagination-info').innerText = `Page: ${result.page}`;
+                }
+            } catch (error) {
+                container.innerHTML = '<span style="color:red">Error: Failed to fetch data. Make sure server is running.</span>';
+                console.error('Error:', error);
+            }
+        }
+
+        // 2. Өнімдерді экранға шығару
+        function displayProducts(products) {
+            const container = document.getElementById('container');
+            if (products.length === 0) {
+                container.innerHTML = 'No products found.';
+                return;
+            }
+
+            container.innerHTML = products.map(p => `
                 <div class="product-card">
-                    <strong>${p.name}</strong> — $${p.price} <br>
+                    <strong>${p.name}</strong> - $${p.price} <br>
                     <small>Company: ${p.company} | Rating: ${p.rating}</small>
                 </div>
             `).join('');
         }
 
+        // 3. Беттерді ауыстыру
         function changePage(step) {
             currentPage += step;
             if (currentPage < 1) currentPage = 1;
-            document.getElementById('pageLabel').innerText = `Page: ${currentPage}`;
-            fetchData(`/api/products?page=${currentPage}&limit=3`);
+            fetchData(`?page=${currentPage}&limit=${limit}`);
         }
 
-        fetchData('/api/products?page=1&limit=3');
+        // Алғашқы жүктеу
+        fetchData(`?page=${currentPage}&limit=${limit}`);
     </script>
 </body>
 </html>

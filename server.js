@@ -1,28 +1,39 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-require('dotenv').config();
+const Product = require('./Product');
 
 const app = express();
+
 app.use(express.json());
 app.use(express.static('public'));
 
-const Product = require('./Product');
-
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.log(err));
+  .catch(err => console.error(err));
+
+app.post('/api/products', async (req, res) => {
+  try {
+    const products = req.body;
+    const newProducts = await Product.insertMany(Array.isArray(products) ? products : [products]);
+    res.status(201).json({
+      status: 'success',
+      data: newProducts
+    });
+  } catch (err) {
+    res.status(400).json({ status: 'fail', message: err.message });
+  }
+});
 
 app.get('/api/products', async (req, res) => {
   try {
-    // 1. FILTERING
     const queryObject = { ...req.query };
     const excludeFields = ['sort', 'page', 'limit', 'fields'];
     excludeFields.forEach(el => delete queryObject[el]);
 
     let query = Product.find(queryObject);
 
-    // 2. SORTING
     if (req.query.sort) {
       const sortBy = req.query.sort.split(',').join(' ');
       query = query.sort(sortBy);
@@ -30,13 +41,11 @@ app.get('/api/products', async (req, res) => {
       query = query.sort('-createdAt');
     }
 
-    // 3. FIELD LIMITING
     if (req.query.fields) {
       const fields = req.query.fields.split(',').join(' ');
       query = query.select(fields);
     }
 
-    // 4. PAGINATION (Task 11)
     const pageNum = parseInt(req.query.page) || 1;
     const limitNum = parseInt(req.query.limit) || 10;
     const skip = (pageNum - 1) * limitNum;
@@ -52,7 +61,7 @@ app.get('/api/products', async (req, res) => {
       data: products
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ status: 'error', message: err.message });
   }
 });
 

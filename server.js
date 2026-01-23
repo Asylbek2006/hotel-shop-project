@@ -1,48 +1,48 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
 require('dotenv').config();
-const express = require("express");
-const { MongoClient, ObjectId } = require("mongodb");
+
 const app = express();
-
 app.use(express.json());
+app.use(express.static('public'));
 
-const MONGO_URL = process.env.MONGO_URI || "mongodb://localhost:27017";
-const PORT = process.env.PORT || 3000;
-let db;
+const Product = require('./Product');
 
-MongoClient.connect(MONGO_URL)
-    .then(client => {
-        db = client.db("shop"); // Task 10 бойынша база аты: shop
-        console.log("MongoDB-ге қосылды");
-        app.listen(PORT, () => console.log(`Сервер ${PORT} портында қосулы`));
-    })
-    .catch(err => console.error(err));
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.log(err));
 
-// Task 10: GET /api/products (Filtering, Sorting, Projection)
-app.get("/api/products", async (req, res) => {
-    try {
-        const { category, minPrice, sort, fields } = req.query;
-        let filter = {};
+app.get('/api/products', async (req, res) => {
+  try {
+    const { sort, page, limit } = req.query;
+    let query = Product.find();
 
-        if (category) filter.category = category;
-        if (minPrice) filter.price = { $gte: Number(minPrice) };
-
-        let options = {};
-        if (sort === "price") options.sort = { price: 1 };
-
-        if (fields) {
-            options.projection = {};
-            fields.split(",").forEach(f => options.projection[f] = 1);
-        }
-
-        const products = await db.collection("products").find(filter, options).toArray();
-        res.json(products);
-    } catch (err) {
-        res.status(500).json({ error: "Қате орын алды" });
+    if (sort) {
+      const sortBy = sort.split(',').join(' ');
+      query = query.sort(sortBy);
     }
+
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    query = query.skip(skip).limit(limitNum);
+
+    const products = await query;
+    res.status(200).json({
+      page: pageNum,
+      count: products.length,
+      data: products
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Басқа CRUD маршруттары (Task 11 үшін керек)
-app.post("/api/products", async (req, res) => {
-    const result = await db.collection("products").insertOne(req.body);
-    res.status(201).json(result);
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

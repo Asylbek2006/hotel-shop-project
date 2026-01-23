@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice 10 & 11 Defense</title>
+    <style>
+        body { font-family: sans-serif; padding: 30px; background: #f4f7f6; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; }
+        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 5px; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .product-card { border-bottom: 1px solid #eee; padding: 10px; }
+        .controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Product Management System</h1>
+
+        <div class="section">
+            <h3>Task 10: Sorting</h3>
+            <button onclick="fetchData('/api/products?sort=price')">Sort by Price (Low to High)</button>
+            <button onclick="fetchData('/api/products?sort=-price')">Sort by Price (High to Low)</button>
+            <button onclick="fetchData('/api/products?sort=name')">Sort by Name (A-Z)</button>
+        </div>
+
+        <div class="section">
+            <h3>Task 11: Pagination</h3>
+            <div class="controls">
+                <button onclick="changePage(-1)">Previous</button>
+                <span id="pageLabel">Page: 1</span>
+                <button onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+
+        <div id="productList"></div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+
+        async function fetchData(url) {
+            const res = await fetch(url);
+            const responseData = await res.json();
+            const products = responseData.data ? responseData.data : responseData;
+            
+            const list = document.getElementById('productList');
+            list.innerHTML = products.map(p => `
+                <div class="product-card">
+                    <strong>${p.name}</strong> — $${p.price} <br>
+                    <small>Company: ${p.company} | Rating: ${p.rating}</small>
+                </div>
+            `).join('');
+        }
+
+        function changePage(step) {
+            currentPage += step;
+            if (currentPage < 1) currentPage = 1;
+            document.getElementById('pageLabel').innerText = `Page: ${currentPage}`;
+            fetchData(`/api/products?page=${currentPage}&limit=3`);
+        }
+
+        fetchData('/api/products?page=1&limit=3');
+    </script>
+</body>
+</html>

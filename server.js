@@ -15,24 +15,40 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.get('/api/products', async (req, res) => {
   try {
-    const { sort, page, limit } = req.query;
-    let query = Product.find();
+    // 1. FILTERING
+    const queryObject = { ...req.query };
+    const excludeFields = ['sort', 'page', 'limit', 'fields'];
+    excludeFields.forEach(el => delete queryObject[el]);
 
-    if (sort) {
-      const sortBy = sort.split(',').join(' ');
+    let query = Product.find(queryObject);
+
+    // 2. SORTING
+    if (req.query.sort) {
+      const sortBy = req.query.sort.split(',').join(' ');
       query = query.sort(sortBy);
+    } else {
+      query = query.sort('-createdAt');
     }
 
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
+    // 3. FIELD LIMITING
+    if (req.query.fields) {
+      const fields = req.query.fields.split(',').join(' ');
+      query = query.select(fields);
+    }
+
+    // 4. PAGINATION (Task 11)
+    const pageNum = parseInt(req.query.page) || 1;
+    const limitNum = parseInt(req.query.limit) || 10;
     const skip = (pageNum - 1) * limitNum;
 
     query = query.skip(skip).limit(limitNum);
 
     const products = await query;
+    
     res.status(200).json({
+      status: 'success',
+      results: products.length,
       page: pageNum,
-      count: products.length,
       data: products
     });
   } catch (err) {

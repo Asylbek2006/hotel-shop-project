@@ -13,18 +13,10 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error(err))
 
-const authMiddleware = (req, res, next) => {
-  const apiKey = req.headers['x-api-key']
-  if (!apiKey || apiKey !== process.env.API_KEY) {
-    return res.status(401).json({ status: 'fail', message: 'Unauthorized: Invalid or missing API Key' })
-  }
-  next()
-}
-
 app.get('/version', (req, res) => {
   res.json({
-    "version": "1.2",
-    "updatedAt": "2026-01-29"
+    "version": "1.1",
+    "updatedAt": "2026-01-28"
   })
 })
 
@@ -47,7 +39,7 @@ app.get('/api/items/:id', async (req, res) => {
   }
 })
 
-app.post('/api/items', authMiddleware, async (req, res) => {
+app.post('/api/items', async (req, res) => {
   try {
     const newItem = await Item.create(req.body)
     res.status(201).json(newItem)
@@ -56,7 +48,7 @@ app.post('/api/items', authMiddleware, async (req, res) => {
   }
 })
 
-app.put('/api/items/:id', authMiddleware, async (req, res) => {
+app.put('/api/items/:id', async (req, res) => {
   try {
     const item = await Item.findByIdAndUpdate(req.params.id, req.body, { new: true, overwrite: true })
     if (!item) return res.status(404).json({ message: 'Item not found' })
@@ -66,7 +58,7 @@ app.put('/api/items/:id', authMiddleware, async (req, res) => {
   }
 })
 
-app.patch('/api/items/:id', authMiddleware, async (req, res) => {
+app.patch('/api/items/:id', async (req, res) => {
   try {
     const item = await Item.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true })
     if (!item) return res.status(404).json({ message: 'Item not found' })
@@ -76,13 +68,31 @@ app.patch('/api/items/:id', authMiddleware, async (req, res) => {
   }
 })
 
-app.delete('/api/items/:id', authMiddleware, async (req, res) => {
+app.delete('/api/items/:id', async (req, res) => {
   try {
     const item = await Item.findByIdAndDelete(req.params.id)
     if (!item) return res.status(404).json({ message: 'Item not found' })
     res.status(204).send()
   } catch (err) {
     res.status(500).json({ message: err.message })
+  }
+})
+
+app.get('/api/products', async (req, res) => {
+  try {
+    const products = await Product.find()
+    res.status(200).json({ status: 'success', data: products })
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message })
+  }
+})
+
+app.post('/api/products', async (req, res) => {
+  try {
+    const products = await Product.insertMany(Array.isArray(req.body) ? req.body : [req.body])
+    res.status(201).json({ status: 'success', data: products })
+  } catch (err) {
+    res.status(400).json({ status: 'fail', message: err.message })
   }
 })
 
